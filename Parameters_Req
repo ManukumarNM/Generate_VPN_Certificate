@@ -1,0 +1,425 @@
+
+Device:
+=============================
+Server_IP  -> 139.59.65.241
+Device_Type
+Site_ID -> 1
+Customer_Name
+Model_Name
+Project_Type
+
+
+Person:
+=============================
+Server_IP
+Person_Name
+Project_Name
+Project_Scope
+
+===========================================views/py==========================================================
+from django.http import JsonResponse
+from rest_framework import viewsets
+from .models import CertificateRequest
+from .serializers import CertificateRequestSerializer
+import subprocess
+
+class CertificateRequestViewSet(viewsets.ModelViewSet):
+    queryset = CertificateRequest.objects.all()
+    serializer_class = CertificateRequestSerializer
+
+    def create(self, request, *args, **kwargs):
+        # Extract parameters from the request data
+        server_ip = request.data.get('server_ip')
+        device_type = request.data.get('device_type')
+        site_id = request.data.get('site_id')
+        customer_name = request.data.get('customer_name')
+        model_name = request.data.get('model_name')
+        project_type = request.data.get('project_type')
+
+        # Save the request data to the database
+        certificate_request = CertificateRequest.objects.create(
+            server_ip=server_ip,
+            device_type=device_type,
+            site_id=site_id,
+            customer_name=customer_name,
+            model_name=model_name,
+            project_type=project_type
+        )
+
+        # Generate the certificate using your existing code
+        ssh_user = 'root'
+        ssh_password = 'weLcome2IT'
+        ssh_port = 22
+        ssh_host = server_ip  # Use the provided server IP
+        remote_command = f'/root/OpenVPN-Setup/new_openvpn-install.sh {site_id} {customer_name}'
+
+        try:
+            ssh_command = [
+                'sshpass', '-p', ssh_password,
+                'ssh', '-p', str(ssh_port), f'{ssh_user}@{ssh_host}', remote_command
+            ]
+
+            result = subprocess.run(ssh_command, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+            if result.returncode == 0:
+                # Certificate generated successfully
+                return JsonResponse({'message': 'Certificate generated successfully'})
+            else:
+                # Certificate generation failed
+                certificate_request.delete()  # Delete the database record
+                return JsonResponse({'error': result.stderr.decode('utf-8')}, status=500)
+        except subprocess.CalledProcessError as e:
+            # Handle any subprocess error
+            certificate_request.delete()  # Delete the database record
+            return JsonResponse({'error': str(e)}, status=500)
+        except Exception as e:
+            # Handle any other exception
+            certificate_request.delete()  # Delete the database record
+            return JsonResponse({'error': str(e)}, status=500)
+======================================================================================================================================
+from django.http import JsonResponse
+from rest_framework import viewsets
+from .models import CertificateRequest
+from .serializers import CertificateRequestSerializer
+import subprocess
+
+class CertificateRequestViewSet(viewsets.ModelViewSet):
+    queryset = CertificateRequest.objects.all()
+    serializer_class = CertificateRequestSerializer
+
+    def create(self, request, *args, **kwargs):
+        # Extract parameters from the request data
+        server_ip = request.data.get('server_ip')
+        device_type = request.data.get('device_type')
+        site_id = request.data.get('site_id')
+        customer_name = request.data.get('customer_name')
+        model_name = request.data.get('model_name')
+        project_type = request.data.get('project_type')
+
+        # Save the request data to the database
+        certificate_request = CertificateRequest.objects.create(
+            server_ip=server_ip,
+            device_type=device_type,
+            site_id=site_id,
+            customer_name=customer_name,
+            model_name=model_name,
+            project_type=project_type
+        )
+
+        # Initialize variables to capture certificate content and error message
+        certificate_content = None
+        error_message = None
+
+        # Generate the certificate using your existing code
+        ssh_user = 'root'
+        ssh_password = 'weLcome2IT'
+        ssh_port = 22
+        ssh_host = server_ip  # Use the provided server IP
+        remote_command = f'/root/OpenVPN-Setup/new_openvpn-install.sh {site_id} {customer_name}'
+
+        try:
+            ssh_command = [
+                'sshpass', '-p', ssh_password,
+                'ssh', '-p', str(ssh_port), f'{ssh_user}@{ssh_host}', remote_command
+            ]
+
+            result = subprocess.run(ssh_command, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+            if result.returncode == 0:
+                # Certificate generated successfully
+                certificate_content = result.stdout.decode('utf-8')
+            else:
+                # Certificate generation failed
+                certificate_request.delete()  # Delete the database record
+                error_message = result.stderr.decode('utf-8')
+        except subprocess.CalledProcessError as e:
+            # Handle any subprocess error
+            certificate_request.delete()  # Delete the database record
+            error_message = str(e)
+        except Exception as e:
+            # Handle any other exception
+            certificate_request.delete()  # Delete the database record
+            error_message = str(e)
+
+        # Prepare the response JSON
+        if certificate_content:
+            response_data = {'message': 'Certificate generated successfully', 'certificate_content': certificate_content}
+        else:
+            response_data = {'error': error_message}
+        
+        return JsonResponse(response_data, status=200 if certificate_content else 500)
+
+===========================================================================================================================================
+The working code of views.py for 
+==============================================================================================================================================
+from django.http import JsonResponse
+from rest_framework import viewsets
+from .models import CertificateRequest
+from .serializers import CertificateRequestSerializer
+import subprocess
+
+class CertificateRequestViewSet(viewsets.ModelViewSet):
+    queryset = CertificateRequest.objects.all()
+    serializer_class = CertificateRequestSerializer
+
+    def create(self, request, *args, **kwargs):
+        # Extract parameters from the request data
+        server_ip = request.data.get('server_ip')
+        device_type = request.data.get('device_type')
+        site_id = request.data.get('site_id')
+        customer_name = request.data.get('customer_name')
+        model_name = request.data.get('model_name')
+        project_type = request.data.get('project_type')
+        device_id = request.data.get('device_id')
+
+        # Set the device_id in the request data for database storage
+        request.data['device_id'] = device_id
+
+        # Save the request data to the database
+        serializer = CertificateRequestSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+
+            # Initialize variables to capture certificate content and error message
+            certificate_content = None
+            error_message = None
+
+            # Generate the certificate using your existing code
+            ssh_user = 'root'
+            ssh_password = 'weLcome2IT'
+            ssh_port = 22
+            ssh_host = server_ip  # Use the provided server IP
+            # Use the updated customer_name from the serializer
+            remote_command = f'/root/OpenVPN-Setup/new_openvpn-install.sh {site_id} {serializer.instance.customer_name}'
+
+            try:
+                ssh_command = [
+                    'sshpass', '-p', ssh_password,
+                    'ssh', '-p', str(ssh_port), f'{ssh_user}@{ssh_host}', remote_command
+                ]
+
+                result = subprocess.run(ssh_command, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+                if result.returncode == 0:
+                    # Certificate generated successfully
+                    certificate_content = result.stdout.decode('utf-8')
+                else:
+                    # Certificate generation failed
+                    error_message = result.stderr.decode('utf-8')
+            except subprocess.CalledProcessError as e:
+                # Handle any subprocess error
+                error_message = str(e)
+            except Exception as e:
+                # Handle any other exception
+                error_message = str(e)
+
+            # Prepare the response JSON
+            if certificate_content:
+                response_data = {'message': 'Certificate generated successfully', 'certificate_content': certificate_content}
+            else:
+                response_data = {'error': error_message}
+
+            return JsonResponse(response_data, status=200 if certificate_content else 500)
+        else:
+            return JsonResponse({'error': 'Invalid data'}, status=400)
+====================================================================================================================================================
+models.py for the above views.py
+====================================================================================================================================================\
+from django.db import models
+
+class CertificateRequest(models.Model):
+    server_ip = models.GenericIPAddressField()
+    device_type = models.CharField(max_length=100)
+    site_id = models.IntegerField()
+    customer_name = models.CharField(max_length=255)  # Removed unique=True
+    model_name = models.CharField(max_length=100)
+    project_type = models.CharField(max_length=100)
+    device_id = models.CharField(max_length=10, blank=True, null=True)
+
+
+    def save(self, *args, **kwargs):
+            if not self.customer_name:
+                super(CertificateRequest, self).save(*args, **kwargs)
+                return
+
+            original_customer_name = self.customer_name
+            i = 0
+            while True:
+                if i == 0:
+                    new_customer_name = original_customer_name
+                else:
+                    new_customer_name = f"{original_customer_name}_{i:02d}"
+
+                
+                existing_requests = CertificateRequest.objects.filter(customer_name=new_customer_name)
+                if not existing_requests.exists():
+                    self.customer_name = new_customer_name
+                    super(CertificateRequest, self).save(*args, **kwargs)
+                    return
+
+                i += 1
+
+
+==================================================================================================================================================================
+from django.http import HttpResponse
+from rest_framework import viewsets
+from .models import CertificateRequest
+from .serializers import CertificateRequestSerializer
+import subprocess
+import os
+
+class CertificateRequestViewSet(viewsets.ModelViewSet):
+    queryset = CertificateRequest.objects.all()
+    serializer_class = CertificateRequestSerializer
+
+    def create(self, request, *args, **kwargs):
+        # Extract parameters from the request data
+        server_ip = request.data.get('server_ip')
+        device_type = request.data.get('device_type')
+        site_id = request.data.get('site_id')
+        customer_name = request.data.get('customer_name')
+        model_name = request.data.get('model_name')
+        project_type = request.data.get('project_type')
+        device_id = request.data.get('device_id')
+
+        # Set the device_id in the request data for database storage
+        request.data['device_id'] = device_id
+
+        # Save the request data to the database
+        serializer = CertificateRequestSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+
+            # Initialize variables to capture certificate content and error message
+            certificate_content = None
+            error_message = None
+
+            # Generate the certificate using your existing code
+            ssh_user = 'root'
+            ssh_password = 'weLcome2IT'
+            ssh_port = 22
+            ssh_host = server_ip  # Use the provided server IP
+            # Use the updated customer_name from the serializer
+            remote_command = f'/root/OpenVPN-Setup/new_openvpn-install.sh {site_id} {serializer.instance.customer_name}'
+
+            try:
+                ssh_command = [
+                    'sshpass', '-p', ssh_password,
+                    'ssh', '-p', str(ssh_port), f'{ssh_user}@{ssh_host}', remote_command
+                ]
+
+                result = subprocess.run(ssh_command, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+                if result.returncode == 0:
+                    # Certificate generated successfully
+                    certificate_content = result.stdout
+                else:
+                    # Certificate generation failed
+                    error_message = result.stderr.decode('utf-8')
+            except subprocess.CalledProcessError as e:
+                # Handle any subprocess error
+                error_message = str(e)
+            except Exception as e:
+                # Handle any other exception
+                error_message = str(e)
+
+            # Prepare the response as a downloadable certificate
+            if certificate_content:
+                # Save the certificate content to a file
+                certificate_filename = f'{serializer.instance.customer_name}.ovpn'
+                certificate_path = os.path.join('/root/certificate/', certificate_filename)
+                with open(certificate_path, 'wb') as certificate_file:
+                    certificate_file.write(certificate_content)
+
+                # Read the content of the certificate file
+                with open(certificate_path, 'rb') as certificate_file:
+                    certificate_content = certificate_file.read()
+
+                # Return a response with the certificate file as an attachment
+                response = HttpResponse(certificate_content, content_type='application/octet-stream')
+                response['Content-Disposition'] = f'attachment; filename="{certificate_filename}"'
+                return response
+            else:
+                return JsonResponse({'error': error_message}, status=500)
+        else:
+            return JsonResponse({'error': 'Invalid data'}, status=400)
+===================================================================================================================================================================================================
+
+Proper working code of certificate generation:
+
+======================================================
+
+# from django.http import JsonResponse
+# from rest_framework import viewsets
+# from .models import CertificateRequest
+# from .serializers import CertificateRequestSerializer
+# import subprocess
+
+# class CertificateRequestViewSet(viewsets.ModelViewSet):
+#     queryset = CertificateRequest.objects.all()
+#     serializer_class = CertificateRequestSerializer
+
+#     def create(self, request, *args, **kwargs):
+#         # Extract parameters from the request data
+#         server_ip = request.data.get('server_ip')
+#         device_type = request.data.get('device_type')
+#         site_id = request.data.get('site_id')
+#         customer_name = request.data.get('customer_name')
+#         model_name = request.data.get('model_name')
+#         project_type = request.data.get('project_type')
+#         device_id = request.data.get('device_id')
+
+#         # Set the device_id in the request data for database storage
+#         request.data['device_id'] = device_id
+
+#         # Save the request data to the database
+#         serializer = CertificateRequestSerializer(data=request.data)
+#         if serializer.is_valid():
+#             serializer.save()
+
+#             # Initialize variables to capture certificate content and error message
+#             certificate_content = None
+#             error_message = None
+
+#             # Generate the certificate using your existing code
+#             ssh_user = 'root'
+#             ssh_password = 'weLcome2IT'
+#             ssh_port = 22
+#             ssh_host = server_ip  # Use the provided server IP
+#             # Use the updated customer_name from the serializer
+#             remote_command = f'/root/OpenVPN-Setup/new_openvpn-install.sh {site_id} {serializer.instance.customer_name}'
+
+#             try:
+#                 ssh_command = [
+#                     'sshpass', '-p', ssh_password,
+#                     'ssh', '-p', str(ssh_port), f'{ssh_user}@{ssh_host}', remote_command
+#                 ]
+
+#                 result = subprocess.run(ssh_command, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+#                 if result.returncode == 0:
+#                     # Certificate generated successfully
+#                     certificate_content = result.stdout.decode('utf-8')
+#                 else:
+#                     # Certificate generation failed
+#                     error_message = result.stderr.decode('utf-8')
+#             except subprocess.CalledProcessError as e:
+#                 # Handle any subprocess error
+#                 error_message = str(e)
+#             except Exception as e:
+#                 # Handle any other exception
+#                 error_message = str(e)
+
+#             # Prepare the response JSON
+#             if certificate_content:
+#                 response_data = {'message': 'Certificate generated successfully', 'certificate_content': certificate_content}
+#             else:
+#                 response_data = {'error': error_message}
+
+#             return JsonResponse(response_data, status=200 if certificate_content else 500)
+#         else:
+#             return JsonResponse({'error': 'Invalid data'}, status=400)
+
+
+
+http://127.0.0.1:8000/certificate-requests/
